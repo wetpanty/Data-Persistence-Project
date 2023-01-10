@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -18,10 +19,29 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+    public static int bestScore = 0;
+    public static string bestPlayer = "";
+    private string userName = "";
+    [SerializeField] Text nameText;
+    [SerializeField] Text bestScoreText;
+
     
     // Start is called before the first frame update
     void Start()
     {
+        LoadRecords();
+        bestScoreText.text = $"Best Score : {bestScore} Name : {bestPlayer}";
+
+        if (InputName.Instance != null)
+        {
+            userName = InputName.userName;
+            nameText.text = "Name : " + userName;
+        }
+        else
+        {
+            Debug.Log("No instance");
+        }
+        
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -72,5 +92,47 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+
+        if(m_Points >= bestScore)
+        {
+            bestScore = m_Points;
+            bestPlayer = userName;
+            bestScoreText.text = $"Best Score : {bestScore} Name : {bestPlayer}";//Remember to add .text
+            SaveRecords();
+        }
+    }
+
+    [System.Serializable]
+   class SaveData
+    {
+        public int bestScore;
+        public string bestPlayer;
+    }
+
+    public static void SaveRecords()//static methods can only use static variables
+    {
+        var SaveDataInstance = new SaveData();
+
+        SaveDataInstance.bestScore = bestScore;
+        SaveDataInstance.bestPlayer = bestPlayer;
+
+        string jsonData = JsonUtility.ToJson(SaveDataInstance);
+
+        File.WriteAllText(Application.persistentDataPath + "/DDPsavefile.json", jsonData);
+        Debug.Log("Records saved");
+
+    }
+
+    public static void LoadRecords()
+    {
+        string path = Application.persistentDataPath + "/DDPsavefile.json";
+        if (File.Exists(path))
+        {
+            string jsonData = File.ReadAllText(path);
+            var SaveDataInstance = JsonUtility.FromJson<SaveData>(jsonData);
+            bestPlayer = SaveDataInstance.bestPlayer;
+            bestScore = SaveDataInstance.bestScore;
+            Debug.Log("Records loaded");
+        }
     }
 }
